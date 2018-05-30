@@ -1,0 +1,16 @@
+Cry 7-2,variance_ecg
+Social Conversation 5,sd_GSR
+Prepare Speech,20perc_GSR
+rest3,20perc_GSR
+Eating 3,meidan_GSR
+rest1,min_GSR
+sing-a-song 1,20perc_GSR
+rest4,meidan_GSR
+rest5,20perc_GSR
+Stroop 2,mean_GSR
+rest6,min_GSR
+Speech,min_GSR
+rest2,20perc_GSR
+Game 4,meidan_GSR
+Ice Bucket 6,20perc_GSR
+Arithmetic,min_GSR
