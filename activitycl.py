@@ -64,19 +64,19 @@ def clusterdata(cluster,n_cluster):
     return cluster_labels
 
 def actcl(data,nm):
-    part = data['participant']
+    part = data['Participant']
     groups = data['combined']
-    act = data['activity']
+    act = data['Activity']
 #    group_kfold = GroupKFold(n_splits = 2)
 #    one, two = group_kfold.split(data,range(len(data)),groups)
 #    dataone = data.loc[one[1]]
 #    datatwo = data.loc[two[1]]
 #    acttwo = list(datatwo['activity'])
 #    actone = list(dataone['activity'])
-    uniact = np.unique(data['activity'])
+    uniact = np.unique(data['Activity'])
     del data['combined']
-    del data['participant']
-    del data['activity']
+    del data['Participant']
+    del data['Activity']
 #    del datatwo['combined']
 #    del datatwo['participant']
 #    del datatwo['activity']
@@ -134,4 +134,3 @@ def actcl(data,nm):
             #    write.writerow([col, i, max(p.iteritems(),key = operator.itemgetter(1))[0], max(p.values())])
     
 #        
-#actcl()

@@ -157,7 +157,7 @@ def cluster_analysis(cluster, part_label, act_label, deflabelmin,definitions,ind
 #    for i in range(len(cluster)):
 #        deflabelmin.append(findlabel(part_label[i],act_label[i],def_label,definitions))
     ccluster = convert(cluster,definitions)
-    return cohen_kappa_score(ccluster,definitions),v_measure_score(cluster,definitions),adjusted_rand_score(cluster,definitions),purity(cluster,definitions,index),normalized_mutual_info_score(ccluster,definitions),definitions
+    return cohen_kappa_score(ccluster,definitions),v_measure_score(ccluster,definitions),adjusted_rand_score(ccluster,definitions),purity(cluster,definitions,index),normalized_mutual_info_score(ccluster,definitions),definitions
 
 
 
@@ -168,17 +168,13 @@ def clusterdata(cluster,n_cluster):
     silhouette_avg = silhouette_score(cluster, cluster_labels)
     return silhouette_avg, cluster_labels
 
-def normalize(data, parts):
-    for p in parts:
-        test = data.loc[data['participant'] == p]
-        for col in range(3,37):
-            temp = test.iloc[:,col].as_matrix()
-            mx = np.max(temp)
-            mn = np.min(temp)
-            res = np.array([float(x-mn)/float(mx-mn) for x in temp])
-            test.iloc[:,col] = res
-        data.loc[data['participant'] == p] = test
-    return data
+def normalize(df):
+    result = df.copy()
+    for feature_name in df.columns:
+        max_value = df[feature_name].max()
+        min_value = df[feature_name].min()
+        result[feature_name] = (df[feature_name] - min_value) / (max_value - min_value)
+    return result
 
 def ttestselect(act, ttest):
     index =0
@@ -206,10 +202,21 @@ def ttestselect(act, ttest):
                 features.append(col)
                 tstat.append(stat)
     return features
+def combine(x,y):
+    temp = []
+    for i in range(len(x)):
+        string = str(x[i]) + str(y[i])
+        x[i] = string
+    return x
 
-data = pd.read_csv('data.csv')
-parts = np.unique(data['participant'].as_matrix())
-data = normalize(data,parts)
+
+ECGonly = pd.read_csv('ret.csv')
+ECGonly = ECGonly.dropna()
+ECGonly['combined'] = combine(list(ECGonly['Participant']),list(ECGonly['Activity']))
+for part in np.unique(list(ECGonly['Participant'])):
+    x = ECGonly[ECGonly[ECGonly['Participant'] == part].columns[2:32]]   
+    ECGonly[ECGonly[ECGonly['Participant'] == part].columns[2:32]] = normalize(ECGonly[ECGonly[ECGonly['Participant'] == part].columns[2:32]])
+    
 #scaler = MaxAbsScaler()
 #tdata = data.iloc[:,3:36]
 #scaler.fit(tdata)
@@ -221,18 +228,20 @@ data = normalize(data,parts)
 #gsrfeatures = ['mean_GSR','min_GSR','sd_GSR','meidan_GSR','08per_GSR','20perc_GSR']
 #hrfeatures = ['min_polar','max_polar']
 #ecggsrfeatures = ecgfeatures + gsrfeatures
-indexname = list(data.columns)
-dm = data[['participant','activity']]
+features = list(ECGonly.columns)[3:33]
+features.extend(['Participant','Activity','combined'])
+dm = ECGonly[['Participant','Activity']]
 da = dm.as_matrix()
-df = data[['pss',	'Intended',	'BinaryStress',	'LikertStress',	'PSS1'	,'PSS2',	'PSS3',	'PSS4',	'happy',	'exicted',	'content',	'worried',	'irritable/angry',	'Sad']]
-combined = data['combined']
+df = ECGonly[['pss-q4',	'Intended',	'BinaryStress',	'LikertStress',	'PSS1'	,'PSS2',	'PSS3',
+              'PSS4',	'happy',	'excited',	'content',	'worried',	'irritable/angry',	'Sad']]
+combined = ECGonly['combined']
 bestcohen = 0
 silhouettes = []
 #with open('resultsofcluster.csv','w') as csvfile:
 #    write = csv.writer(csvfile,delimiter=',')
 #    write.writerow(['features','definitions','k_clusters','cohens','v_measure','rand_index','purity','normalized_mutual_info_score','silhouette'])
 #    
-for i in range(5):
+for i in range(1):
     silhoutteaverages = []
     cohaverages = []
     purities = []
@@ -244,55 +253,44 @@ for i in range(5):
     psspurities = []
     psstpurities = []
     
-    if i == 0:
-        name = ['ecg']
-        nm = 'ecg'
-        dashline = 'r--'
-    if i == 1:
-        name = ['GSR']
-        nm = 'gsr'
-        dashline = 'b--'
-    if i == 2:
-        dashline = 'g--'
-        nm = 'ecg+gsr'
-        name = ['ecg','GSR']
-    if i == 3:
-        dashline = 'm--'
-        nm = 'Hr'
-        name = ['polar']
-    if i == 4:
-        dashline = 'y--'
-        nm = 'All'
-        name = ['ecg','GSR','polar']
-    features = []
-    for x in indexname:
-        if 'combined' in x or 'participant' in x or 'activity' in x:
-            features.append(x)
-        for n in name:
-            if n in x:
-                features.append(x)
-    features = data[features]
+#    if i == 0:
+#        name = ['ecg']
+#        nm = 'ecg'
+#        dashline = 'r--'
+
+    features = ECGonly[features]
     selectfeatures = actcl(features,nm)
     if i == 5:
         print selectfeatures
     cluster = features[selectfeatures].as_matrix()
 #    for j in range(2,10):
-    for j in range(2,16):
-        x,y = clusterdata(cluster,j)
-        part = data['participant']
-        groups = data['combined']
-        act = data['activity']
-        p = actclusterprec(y, part, groups, act)
-        silhoutteaverages.append(p)
+    with open('resutlsofclusteringnewECGonly.csv', 'wb') as f:
+        writer = csv.writer(f)
+        for j in range(3,5):
+            print j
+            x,y = clusterdata(cluster,j)
+            part = ECGonly['Participant']
+            groups = ECGonly['combined']
+            act = ECGonly['Activity']
+            p = actclusterprec(y, part, groups, act)
+            silhoutteaverages.append(p)
+            for col in df:
+                print '-----------------------------------------------------------'
+                print col
+                testwith = list(df[col])
+                n,m,o,r,s,deflabel = cluster_analysis(y,list(ECGonly['Participant']),list(ECGonly['Activity']),da,testwith,j)
+                writer.writerow([n,m,o,r,s,j,col])
+            print getpiecharts(y,deflabel,list(ECGonly['Participant']),list(ECGonly['Activity']),j)
     if i == 0:
         totalavg = silhoutteaverages
     else:
         totalavg = [x+y for x,y in zip(totalavg,silhoutteaverages)]
     print silhoutteaverages
     plt.plot(range(2,16),silhoutteaverages,dashline)
-#        for col in df:
-#            testwith = list(df[col])
-#            n,m,o,r,s,deflabel = cluster_analysis(y,list(data['participant']),list(data['activity']),da,testwith,j)
+#    for col in df:
+#        testwith = list(df[col])
+#        n,m,o,r,s,deflabel = cluster_analysis(y,list(ECGonly['Participant']),list(ECGonly['Activity']),da,testwith,j)
+#        print getpiecharts(y,deflabel,list(ECGonly['Participant']),ECGonly(ECGonly['Activity']),j)
 ##            if 'worried' in col:
 ##                cohaverages.append(n)
 ##                if j == 9:

@@ -1,11 +1,20 @@
 import csv
 from sklearn.feature_selection import VarianceThreshold
-import numpy
+import numpy as np
+import pandas as pd
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_samples, silhouette_score
 import pandas as pd
 from sklearn.metrics import cohen_kappa_score,v_measure_score,adjusted_rand_score,f1_score,accuracy_score
+
+def normalize(df):
+    result = df.copy()
+    for feature_name in df.columns:
+        max_value = df[feature_name].max()
+        min_value = df[feature_name].min()
+        result[feature_name] = (df[feature_name] - min_value) / (max_value - min_value)
+    return result
 
 def findlabel(part,act,data):
     index = 0
@@ -59,10 +68,16 @@ def forsk(adata,bdata,labela,labelb,iterations):
     return cohen_kappa_score(adata,testwit),v_measure_score(adata,testwit),adjusted_rand_score(adata,testwit),f1_score(adata,testwit),accuracy_score(adata,testwit)
     
     
+ECGonly = pd.read_csv('ret.csv')
+ECGonly = ECGonly.dropna()
+data = ECGonly[ECGonly.columns[3:33]]
+for part in np.unique(list(ECGonly['Participant'])):
+    data[ECGonly['Participant'] == part] = normalize(data[ECGonly['Participant'] == part])
 
-data = numpy.loadtxt(open("featuresforclustering.csv", "rb"), delimiter=",", skiprows=1)
-sel = VarianceThreshold(threshold=(.95 * (1 - .95)))
-X = sel.fit_transform(data)
+#data = numpy.loadtxt(open("featuresforclustering.csv", "rb"), delimiter=",", skiprows=1)
+#sel = VarianceThreshold(threshold=(.95 * (1 - .95)))
+#X = sel.fit_transform(data)
+X = data
 max = 0
 maxind = 0
 maxcluster = []
@@ -95,7 +110,7 @@ for i in range(2,12):
 #print [pcaclust,maxindpca,maxpca]
 
 
-self_report = numpy.loadtxt(open("srdata.csv", "rb"), delimiter=",")
+self_report = np.loadtxt(open("srdata.csv", "rb"), delimiter=",")
 kmeansself = KMeans(n_clusters=maxind, random_state=0).fit(X)
 cluster_labelsself = kmeansself.fit_predict(self_report)
 print [len(cluster_labelsself),len(cluster_labels)]
